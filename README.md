@@ -2,6 +2,14 @@
 
 
 
+### Clone Repository
+
+```
+git clone --recursive https://github.com/wo7864/SecondaryVoice
+```
+
+
+
 ### Pretrained Models
 
 [다운로드](https://drive.google.com/drive/folders/1aIl8ObHxsmsFLXBz-y05jMBN4LrpQejm)
