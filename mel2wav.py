@@ -47,12 +47,12 @@ generator.remove_weight_norm()
 print("Complete.")
 
 
-def mel2wav(src_audio_path, target_mel):    
+def mel2wav(src_num, target_mel, save_path):    
     ############################ Source Data 준비
 
     sourceloader = TextMelDataset(hp, 'assem-vc/datasets/inference_source','metadata_g2p.txt',train=False, use_f0s = True)
 
-    source_idx = 1 # 0 ~ len(source_metadata)-1
+    source_idx = src_num # 0 ~ len(source_metadata)-1
     audio_path, text,_ = sourceloader.meta[source_idx]
     x = sourceloader.__getitem__(source_idx)
     batch = text_mel_collate([x])
@@ -81,9 +81,8 @@ def mel2wav(src_audio_path, target_mel):
         audio = audio.detach().cpu().numpy().astype('int16')
 
     # 저장
-    save_path = f'example/synthesis.wav'
     sf.write(save_path, audio, 22050)   
-    return save_path
+    return audio
 
 if __name__ == "__main__":
     target_mel = 'example/a001.npy'
