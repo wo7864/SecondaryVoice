@@ -30,5 +30,5 @@ if __name__ == "__main__":
     wav_path = 'example/a001.wav' # 변환 할 wav파일
     basename = wav_path.split('/')[-1].split('.')[0]
     mel = wav2mel(wav_path)
-    np.save(f'example/{basename}.npy', mel)
-    print(mel.shape)
+    #np.save(f'example/{basename}.npy', mel)
+    #print(mel.shape)

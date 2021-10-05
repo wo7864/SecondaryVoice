@@ -8,8 +8,8 @@ from mel2wav import mel2wav
 
 if __name__ == "__main__":
 
-    src_audio_num = 'example/p286_010-22k.wav'
-    target_audio_path = 'example/a001.wav'
+    src_audio_num = 'example/p226_049-22k.wav'
+    target_audio_path = 'example/p226_049-22k.wav'
     save_path = target_audio_path.split('/')[-1].split('.')[0] + '.wav'
 
     script = stt(src_audio_num)
