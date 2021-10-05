@@ -24,6 +24,7 @@ from meldataset import MAX_WAV_VALUE
 from g2p_en import G2p
 from datasets.text import Language
 from modules.mel import mel_spectrogram
+from pysptk import sptk
 
 synthesizer_path = 'pretrained_models/assem-vc_pretrained.ckpt' # path of synthesizer(VC decoder) checkpoint
 generator_path = 'pretrained_models/hifi-gan_vctk_g_02600000' # path of hifi-gan checkpoint
@@ -70,6 +71,28 @@ def script2text(script):
     phoneme = phoneme.replace('0','').replace('1','').replace('2','').replace('{\'}','\'').replace('{...}','...')
     return phoneme.replace(' {!}','!').replace(' {?}','?').replace(' {.}','.').replace(' {,}',',')
 
+
+def get_f0(audio, f0_mean=None, f0_var=None, sampling_rate=22050, frame_length=1024,
+               hop_length=256, f0_min=80, f0_max=880, harm_thresh=0.25, mel_fmin = 70.0):
+
+        f0 = sptk.rapt(audio*32768, sampling_rate, hop_length, min=f0_min, max=f0_max, otype=2)
+
+        f0 = np.clip(f0, 0, f0_max)
+
+        index_nonzero = np.nonzero(f0)
+        f0[index_nonzero] += 10.0
+        f0 -= 10.0
+
+        if f0_mean == None:
+            f0_mean =  np.mean(f0[index_nonzero])
+        if f0_var == None:
+            f0_var =  np.std(f0[index_nonzero])
+
+        f0[index_nonzero] = (f0[index_nonzero] - f0_mean) / f0_var
+
+        return f0
+
+
 def get_mel_and_f0(audiopath, f0_mean=None, f0_var=None):
     wav, sr = librosa.load(audiopath, sr=None, mono=True)
     assert sr == hp.audio.sampling_rate, \
@@ -85,30 +108,38 @@ def get_mel_and_f0(audiopath, f0_mean=None, f0_var=None):
                             hp.audio.mel_fmin, hp.audio.mel_fmax, center=False)
     mel = mel.squeeze(0)
     wav = wav.cpu().numpy()[0]
-    return mel
+    f0 = get_f0(wav, f0_mean, f0_var, hp.audio.sampling_rate,
+                        hp.audio.filter_length, hp.audio.hop_length, hp.audio.f0_min,
+                        hp.audio.f0_max, hp.audio.harm_thresh, hp.audio.mel_fmin)
+    f0 = torch.from_numpy(f0)[None]
+    f0 = f0[:, :mel.size(1)]
+
+    return mel, f0
 
 def getSourceData(audiopath, script=None):
 
     text = script2text(script)
+    print(text)
     lang = Language(hp.data.lang, hp.data.text_cleaners)
     text_norm = torch.IntTensor(lang.text_to_sequence(text, hp.data.text_cleaners))
     mel, f0 = get_mel_and_f0(audiopath)
     return text_norm, mel, 0, 0, f0
 
 
-def mel2wav(src_num, target_mel, save_path):    
+def mel2wav(src_num, target_mel, save_path, script):    
     ############################ Source Data 준비
 
-    sourceloader = TextMelDataset(hp, 'assem-vc/datasets/inference_source','metadata_g2p.txt',train=False, use_f0s = True)
+    # sourceloader = TextMelDataset(hp, 'assem-vc/datasets/inference_source','metadata_g2p.txt',train=False, use_f0s = True)
 
-    source_idx = src_num # 0 ~ len(source_metadata)-1
-    audio_path, text,_ = sourceloader.meta[source_idx]
-    x = sourceloader.__getitem__(source_idx)
+    # source_idx = src_num # 0 ~ len(source_metadata)-1
+    # audio_path, text,_ = sourceloader.meta[source_idx]
+    # x = sourceloader.__getitem__(source_idx)
+
+    x = getSourceData(src_num, script)
     print(x[0].size())
     print(x[1].size())
     print(x[4].size())
     batch = text_mel_collate([x])
-    print("length of the source metadata is : ",len(sourceloader))
 
     ### target Data 준비
     if type(target_mel) == str:
